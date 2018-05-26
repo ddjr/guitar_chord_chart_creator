@@ -1,3 +1,4 @@
+'use strict';
 // PDF format varibles
 var pageWidth = 210;
 var pageHeight = 300;
@@ -15,13 +16,12 @@ var chordSpacing = (pageWidth - (2*pageMarginX))/chordsPerLine;
 var height = chordSpacing;
 var width = chordSpacing*.7;
 var chordMarginX = chordSpacing*.15;
-// Title Varibles
-var title = "Wonderful World";
+var title;
 const TILE_FONT_SIZE = 20;
 var titleX = pageWidth/2;
 var titleY = pageMarginY/2;
 // Footer Variables
-var footer = '- Arranged By David Daly 2017 -';
+var footer = '- Built with ChordChartsForGuitar.com 2018 -';
 const FOOTER_FONT_SIZE = 10;
 var footerX = pageWidth/2;
 var footerY = pageHeight - 10;
@@ -35,12 +35,14 @@ function createPDF() {
   doc = new jsPDF();
   doc.setFont = font;
   drawFretboards();
+  title = document.getElementById('song_title').value;
   drawCenteredText(title, titleX,titleY, TILE_FONT_SIZE);
   drawCenteredText(footer, footerX,footerY, FOOTER_FONT_SIZE);
   doc.save('pdfChords.pdf');
 }
 
 function drawCenteredText(text, x,y, fontSize) {
+  if(!text || !x || !y || !fontSize) {return;}
   doc.setFontSize(fontSize);
   var centeredTextModifer = CalculateCenteredTextModifer(text.length, fontSize);
   doc.text(x-centeredTextModifer,y,text);
@@ -73,7 +75,7 @@ function drawFretboards() {
 function drawChord(x,y,chord){
   drawChordName(x,y, chord.chordName.value);
   drawFretNumber(x+chordMarginX,y, chord.fretNumber.value);
-  drawFingerings(x+chordMarginX,y, chord.fingerings);
+  drawFingerings(x+chordMarginX,y, chord.fingerings, chord.melodyNotes);
   drawOpenStringsSymbols(x+chordMarginX,y, chord.openStrings);
 
 }
@@ -97,7 +99,23 @@ function drawChordName(x,y,name) {
     doc.text(x + width/2 - centered_text_offset, y - 4, name);
   }
 }
-function drawFingerings(x,y,fingerings) {
+function drawSolidMelodyNote(x,y,number) {
+  var radius = 2;
+  var fill = "F";
+  var black = 0;
+  var white = 255;
+  doc.setDrawColor(white);
+  doc.setFillColor(white);
+  doc.circle(stringX,fretY,radius,"F");
+  doc.setDrawColor(black);
+  doc.setFillColor(black);
+  doc.circle(x,y,radius,"");
+  doc.circle(x,y,radius* 0.9,"F");
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(11);
+  doc.text(x -1, y + 1.3, number);
+}
+function drawFingerings(x,y,fingerings, melodyNotes) {
   if(fingerings!== null) {
     for(let i=0; i<fingerings.length; i++) {
       if(fingerings[i] == 1) {
@@ -106,15 +124,66 @@ function drawFingerings(x,y,fingerings) {
         var fretY = fret*(height/frets) + y + (height/frets)/2;
 
         var stringX = string*(width/(strings-1)) + x;
-        radius = 2;
-        fill = "F";
+        var radius = 2;
+        var fill = "F";
+        var black = 0;
+        doc.setDrawColor(black);
+        doc.setFillColor(black);
         doc.circle(stringX,fretY,radius,fill);
       } // END if fingerings
+      if(fingerings[i] == 10) {
+        var fret = Math.floor(i/strings);
+        var string = i % strings;
+        var fretY = fret*(height/frets) + y + (height/frets)/2;
+        var stringX = string*(width/(strings-1)) + x;
+
+        var melodyNumber = 1 + melodyNotes.indexOfValue(i) + "";
+        var radius = 2;
+        var fill = "";
+        var black = 0;
+        var white = 255;
+        doc.setDrawColor(white);
+        doc.setFillColor(white);
+        doc.circle(stringX,fretY,radius,"F");
+        doc.setDrawColor(black);
+        doc.setFillColor(black);
+        doc.circle(stringX,fretY,radius,"");
+
+        doc.setFontSize(11);
+        doc.setTextColor(0,0,0);
+        doc.text(stringX -1, fretY + 1.3, melodyNumber);
+      } // END if fingerings 10
+      if(fingerings[i] == 11) {
+        var fret = Math.floor(i/strings);
+        var string = i % strings;
+        var fretY = fret*(height/frets) + y + (height/frets)/2;
+        var stringX = string*(width/(strings-1)) + x;
+        var melodyNumber = 1 + melodyNotes.indexOfValue(i) + "";
+
+        drawSolidMelodyNote(stringX,fretY,melodyNumber);
+        // var radius = 2;
+        // var fill = "F";
+        // var black = 0;
+        // var white = 255;
+        // doc.setDrawColor(white);
+        // doc.setFillColor(white);
+        // doc.circle(stringX,fretY,radius,"F");
+        // doc.setDrawColor(black);
+        // doc.setFillColor(black);
+        // doc.circle(stringX,fretY,radius,"");
+        // doc.circle(stringX,fretY,radius* 0.9,"F");
+        // doc.setTextColor(255,255,255);
+        //
+        // doc.setFontSize(11);
+        // doc.text(stringX -1, fretY + 1.3, melodyNumber);
+      } // END if fingerings 11
     } // END for fingerings.length
   } // END if fingerings!== null
+  doc.setTextColor(0,0,0);
 } // END function  drawFingerings()
 
 function drawOpenStringsSymbols(x,y, openStrings) {
+  doc.setTextColor(0,0,0);
   if(openStrings!== null) {
     y--; // spaces "o"/"x" just above chord
     for(let i=0; i<openStrings.length; i++) {
@@ -131,6 +200,7 @@ function drawOpenStringsSymbols(x,y, openStrings) {
 } // END drawOpenStringsSymbols()
 
 function drawFretNumber(x,y, fretNumber) {
+  doc.setTextColor(0,0,0);
   if(fretNumber!== null && fretNumber > 3) {
     var offset = height/(frets*2)+1;
     x -= 3;
